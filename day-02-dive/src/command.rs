@@ -1,6 +1,18 @@
 use std::{convert::TryFrom, error::Error, str::FromStr};
 use crate::operation::Operation;
 
+/*
+    TODO: This totally should have just been an enum
+        with values inside it.
+
+    Command:
+        Forward(u32)
+        Up(u32)
+        Down(u32)
+
+    But i guess it's good that I made my own using a tuple and an enum?
+*/
+
 #[derive(Debug)]
 pub struct Command(pub Operation, pub u32);
 
