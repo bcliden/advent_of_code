@@ -19,8 +19,8 @@ fn parse_input(input: &str) -> Vec<VecDeque<char>> {
 fn part_one(input: &str) -> usize {
     let scores: HashMap<char, usize> =
         HashMap::from([(')', 3), (']', 57), ('}', 1197), ('>', 25137)]);
-    // let pairs: HashMap<char, char> =
-    //     HashMap::from([('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')]);
+    let closing_pairs: HashMap<char, char> =
+        HashMap::from([(')', '('), (']', '['), ('}', '{'), ('>', '<')]);
 
     let mut results: Vec<LineStatus> = vec![];
     let data = parse_input(input);
@@ -34,6 +34,7 @@ fn part_one(input: &str) -> usize {
             // println!("With queue of {:?}", queue);
             let ch = line.pop_front();
             // println!("Just popped char {:?}", ch);
+
             if ch.is_none() {
                 if queue.is_empty() {
                     results.push(LineStatus::Complete);
@@ -43,41 +44,41 @@ fn part_one(input: &str) -> usize {
                 break; // exit reading line
             }
 
-            let real_ch = ch.unwrap();
-            match real_ch {
-                '(' => queue.push_back(real_ch),
-                '[' => queue.push_back(real_ch),
-                '{' => queue.push_back(real_ch),
-                '<' => queue.push_back(real_ch),
+            let ch = ch.unwrap();
+            match ch {
+                '(' => queue.push_back(ch),
+                '[' => queue.push_back(ch),
+                '{' => queue.push_back(ch),
+                '<' => queue.push_back(ch),
                 ')' => {
-                    if queue.back() == Some(&'(') {
+                    if queue.back() == Some(&closing_pairs[&ch]) {
                         queue.pop_back(); // dump the last item
                     } else {
-                        results.push(LineStatus::Illegal(real_ch));
+                        results.push(LineStatus::Illegal(ch));
                         break; // exit reading line
                     }
                 }
                 ']' => {
-                    if queue.back() == Some(&'[') {
+                    if queue.back() == Some(&closing_pairs[&ch]) {
                         queue.pop_back(); // remove the paired char
                     } else {
-                        results.push(LineStatus::Illegal(real_ch));
+                        results.push(LineStatus::Illegal(ch));
                         break; // exit reading line
                     }
                 }
                 '}' => {
-                    if queue.back() == Some(&'{') {
+                    if queue.back() == Some(&closing_pairs[&ch]) {
                         queue.pop_back(); // remove the paired char
                     } else {
-                        results.push(LineStatus::Illegal(real_ch));
+                        results.push(LineStatus::Illegal(ch));
                         break; // exit reading line
                     }
                 }
                 '>' => {
-                    if queue.back() == Some(&'<') {
+                    if queue.back() == Some(&closing_pairs[&ch]) {
                         queue.pop_back(); // remove the paired char
                     } else {
-                        results.push(LineStatus::Illegal(real_ch));
+                        results.push(LineStatus::Illegal(ch));
                         break; // exit reading line
                     }
                 }
@@ -85,7 +86,7 @@ fn part_one(input: &str) -> usize {
             }
         }
     }
-    println!("Results: {:?}", results);
+
     results
         .into_iter()
         .filter(|r| variant_eq(r, &LineStatus::Illegal('_')))
