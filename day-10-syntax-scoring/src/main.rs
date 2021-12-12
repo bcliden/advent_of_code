@@ -120,7 +120,6 @@ fn get_solutions(data: Vec<VecDeque<char>>) -> Vec<Line> {
 fn part_one(input: &str) -> usize {
     let point_values: HashMap<char, usize> =
         HashMap::from([(')', 3), (']', 57), ('}', 1197), ('>', 25137)]);
-
     let data = parse_input(input);
     let mut solutions = get_solutions(data);
 
@@ -131,7 +130,7 @@ fn part_one(input: &str) -> usize {
         .into_iter()
         .map(|line| {
             if let Status::Illegal(n) = line.status {
-                return n; // get the value from the enum!
+                n // get the value from the enum!
             } else {
                 unreachable!();
             }
@@ -139,7 +138,7 @@ fn part_one(input: &str) -> usize {
         .map(|c| {
             point_values
                 .get(&c) // get point value from dictionary
-                .map(|n| n.clone())
+                .copied()
                 .unwrap_or(0)
         })
         .sum()
@@ -154,32 +153,28 @@ fn part_two(input: &str) -> usize {
     // retain ONLY incomplete lines
     results.retain(|line| variant_eq(&line.status, &Status::Incomplete));
 
-    let solutions: Vec<Vec<char>> = results
-        .iter()
-        .map(|line| {
-            line
-                .chars_left
-                .iter()
-                .map(|c| OPEN_BRACE_TO_CLOSED[c])
-                .rev()
-                .collect()
-        })
-        .collect();
+    // convert remaining queues into solutions
+    let solutions = results.iter().map(|line| {
+        line.chars_left
+            .iter()
+            .map(|c| OPEN_BRACE_TO_CLOSED[c])
+            .rev()
+            .collect()
+    });
 
-    let scores: Vec<Vec<usize>> = solutions
-        .into_iter()
-        .map(|chars| chars.into_iter().map(|c| point_values[&c]).collect())
-        .collect();
+    // convert braces to scores
+    let scores =
+        solutions.map(|chars: Vec<char>| chars.into_iter().map(|c| point_values[&c]).collect());
 
+    // calculate the score per line
     let mut calculated_scores: Vec<usize> = scores
-        .into_iter()
-        .map(|scores_per_vec| {
+        .map(|scores_per_vec: Vec<usize>| {
             scores_per_vec
                 .into_iter()
                 .fold(0, |acc_score, next_score| (acc_score * 5) + next_score)
         })
         .collect();
-    calculated_scores.sort();
+    calculated_scores.sort_unstable();
     calculated_scores[calculated_scores.len() / 2] // the median score. thanks integer arithmetic!
 }
 
