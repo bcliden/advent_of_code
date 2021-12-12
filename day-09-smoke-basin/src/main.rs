@@ -1,9 +1,32 @@
 use std::collections::HashSet;
 
+// ==================[ Common ]====================
+
 type Coords = (i32, i32);
 type CaveFloor = Vec<Vec<usize>>;
 type VisitorLog = HashSet<Coords>;
 type LowestLog = Vec<(Coords, usize)>;
+
+/// Parse input into a 2d array of usize values
+fn parse_input(input: &str) -> CaveFloor {
+    let width = input.lines().next().unwrap().trim().len();
+    let height = input.lines().count();
+
+    let mut floor: CaveFloor = Vec::with_capacity(height);
+    for _ in 0..height {
+        floor.push(Vec::with_capacity(width))
+    }
+
+    for (n, line) in input.lines().enumerate() {
+        floor[n] = line
+            .trim()
+            .chars()
+            .map(|c| c.to_digit(10).unwrap() as usize)
+            .collect();
+    }
+
+    floor
+}
 
 /// Get value for at a given coordinate
 fn get_coord_value<'a>((row, col): &Coords, floor: &'a CaveFloor) -> Option<&'a usize> {
@@ -23,18 +46,33 @@ fn neighboring_coords((row, col): Coords) -> Vec<Coords> {
     ]
 }
 
-/// Get all valid values for a list of coordinates
-/// in the form of (Coordinate, Value)
-fn get_batch_coord_values(coords: &Vec<Coords>, floor: &CaveFloor) -> Vec<(Coords, usize)> {
-    coords
-        .iter()
-        .cloned()
-        // get value for next squares
-        .map(|c| (c, get_coord_value(&c, floor)))
-        // filter out missing ones
-        .filter(|(_, val)| val.is_some())
-        .map(|(c, v)| (c, v.map(|v| v.clone()).unwrap_or(9)))
-        .collect()
+/// Walk over entire grid, finding the lowest point of basins in grid
+fn find_basin_origins(floor: &CaveFloor) -> LowestLog {
+    let mut visited: VisitorLog = HashSet::new();
+    let mut basin_origins: LowestLog = vec![]; // to be filled by crawling fn
+
+    for (row, _) in floor.iter().enumerate() {
+        for (col, _) in floor[row].iter().enumerate() {
+            visit(
+                &floor,
+                &mut visited,
+                &mut basin_origins,
+                (row as i32, col as i32),
+            );
+        }
+    }
+    basin_origins
+}
+
+// ==================[ Part 1 ]====================
+
+/// Find basin origins, then sum the values (+1) to generate the risk level
+fn does_part1(input: &str) -> usize {
+    let floor: CaveFloor = parse_input(input);
+    find_basin_origins(&floor)
+        .into_iter()
+        .map(|(_, v)| v + 1)
+        .sum()
 }
 
 /// visit a given coordinate, marking as 'inserted', and checking if it's a valid lowest point
@@ -64,6 +102,51 @@ fn visit(
     }
 }
 
+
+/// Get all valid values for a list of coordinates
+/// in the form of (Coordinate, Value)
+fn get_batch_coord_values(coords: &Vec<Coords>, floor: &CaveFloor) -> Vec<(Coords, usize)> {
+    coords
+        .iter()
+        .cloned()
+        // get value for next squares
+        .map(|c| (c, get_coord_value(&c, floor)))
+        // filter out missing ones
+        .filter(|(_, val)| val.is_some())
+        .map(|(c, v)| (c, v.map(|v| v.clone()).unwrap_or(9)))
+        .collect()
+}
+
+// ==================[ Part 2 ]====================
+
+/// Using basin origins (discovered in pt1),
+/// find SIZE of basin and multiply the top 3 together.
+fn does_part2(input: &str) -> usize {
+    let floor: CaveFloor = parse_input(input);
+    let mut basin_sizes: Vec<_> = find_basin_origins(&floor)
+        .into_iter()
+        .map(|(c, _)| c) // drop the values, we don't need 'em
+        .map(|c| get_basin_size(&floor, c))
+        .collect();
+    basin_sizes.sort(); // just reverse iterate below instead of sorting DESC
+    basin_sizes
+        .into_iter()
+        .rev()
+        .take(3)
+        .fold(1, |acc, n| acc * n)
+}
+
+/// From a base coordinate, recursively gather squares in a basin
+/// until either a 9 or end of file.
+///
+/// Returns number of squares within basin
+fn get_basin_size(floor: &CaveFloor, own_coord: Coords) -> usize {
+    let mut visited: VisitorLog = HashSet::new(); // per-basin search level
+    let mut current_basin: VisitorLog = HashSet::new(); // to be filled by crawling fn
+    count_squares(floor, &mut visited, &mut current_basin, own_coord);
+    current_basin.iter().count()
+}
+
 /// Recursively mark current square and neighboring squares.
 /// Records visited squares and squares within current basin,
 /// finally returning the size of the basin.
@@ -89,81 +172,7 @@ fn count_squares(
     }
 }
 
-/// From a base coordinate, recursively gather squares in a basin
-/// until either a 9 or end of file.
-///
-/// Returns number of squares within basin
-fn get_basin_size(floor: &CaveFloor, own_coord: Coords) -> usize {
-    let mut visited: VisitorLog = HashSet::new(); // per-basin search level
-    let mut current_basin: VisitorLog = HashSet::new(); // to be filled by crawling fn
-    count_squares(floor, &mut visited, &mut current_basin, own_coord);
-    current_basin.iter().count()
-}
-
-/// Walk over entire grid, finding the lowest point of basins in grid
-fn find_basin_origins(floor: &CaveFloor) -> LowestLog {
-    let mut visited: VisitorLog = HashSet::new();
-    let mut basin_origins: LowestLog = vec![]; // to be filled by crawling fn
-
-    for (row, _) in floor.iter().enumerate() {
-        for (col, _) in floor[row].iter().enumerate() {
-            visit(
-                &floor,
-                &mut visited,
-                &mut basin_origins,
-                (row as i32, col as i32),
-            );
-        }
-    }
-    basin_origins
-}
-
-/// Using basin origins (discovered in pt1),
-/// find SIZE of basin and multiply the top 3 together.
-fn does_part2(input: &str) -> usize {
-    let floor: CaveFloor = parse_input(input);
-    let mut basin_sizes: Vec<_> = find_basin_origins(&floor)
-        .into_iter()
-        .map(|(c, _)| c) // drop the values, we don't need 'em
-        .map(|c| get_basin_size(&floor, c))
-        .collect();
-    basin_sizes.sort(); // just reverse iterate below instead of sorting DESC
-    basin_sizes
-        .into_iter()
-        .rev()
-        .take(3)
-        .fold(1, |acc, n| acc * n)
-}
-
-/// Find basin origins, then sum the values (+1) to generate the risk level
-fn does_part1(input: &str) -> usize {
-    let floor: CaveFloor = parse_input(input);
-    find_basin_origins(&floor)
-        .into_iter()
-        .map(|(_, v)| v + 1)
-        .sum()
-}
-
-/// Parse input into a 2d array of usize values
-fn parse_input(input: &str) -> CaveFloor {
-    let width = input.lines().next().unwrap().trim().len();
-    let height = input.lines().count();
-
-    let mut floor: CaveFloor = Vec::with_capacity(height);
-    for _ in 0..height {
-        floor.push(Vec::with_capacity(width))
-    }
-
-    for (n, line) in input.lines().enumerate() {
-        floor[n] = line
-            .trim()
-            .chars()
-            .map(|c| c.to_digit(10).unwrap() as usize)
-            .collect();
-    }
-
-    floor
-}
+// ===============[ The rest of it ]==================
 
 fn main() {
     const FULL: &str = include_str!("../input.txt");
