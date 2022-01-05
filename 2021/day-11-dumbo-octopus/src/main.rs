@@ -1,10 +1,5 @@
 use std::{collections::HashSet, fmt::Display};
 
-// #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-// struct Octopus(usize);
-// impl Octopus {
-//     fn check_something() {}
-// }
 type Octopus = usize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -61,15 +56,6 @@ impl OceanFloor {
         }
     }
 
-    // fn increase_some(&mut self, coords: &Vec<Coords>) {
-    //     for coord in coords {
-    //         let cell = self.get_mut_cell(coord);
-    //         if let Some(cell) = cell {
-    //             *cell += 1;
-    //         }
-    //     }
-    // }
-
     fn flash_many(&mut self, flashers: &[Coords], already_flashed: &mut HashSet<Coords>) -> Vec<Coords> {
         let mut new_flashers: Vec<Coords> = vec![];
 
@@ -90,7 +76,6 @@ impl OceanFloor {
 
                     // if this cell is higher than 9 (and hasn't previously flashed), now IT needs to flash
                     if *cell > 9 && !already_flashed.contains(&neighbor) {
-                        // println!("Coord {:?} has val {}... flashing", coord, cell);
                         new_flashers.push(neighbor);
                     }
                 }
@@ -106,7 +91,6 @@ impl OceanFloor {
                 let coord = Coords(row as i32, col as i32);
                 if let Some(cell) = self.read_cell(&coord) {
                     if *cell > 9 {
-                        // println!("Coord {:?} has val {}... flashing", coord, cell);
                         flash_queue.push(coord);
                     }
                 }
@@ -120,33 +104,25 @@ impl OceanFloor {
         let mut already_flashed: HashSet<Coords> = HashSet::new();
 
         let mut next_flashers = self.get_flashers();
-        // println!("Starting with flashers: {:?}", next_flashers);
         while !next_flashers.is_empty() {
-            // println!("{}", self);
             // flash current list, getting any new flashers
             let mut new_flashers = self.flash_many(&next_flashers, &mut already_flashed);
-            // add all the current flashers into the 'visited' set
-            // for c in next_flashers  {
-            //     already_flashed.insert(c);
-            // }
+
             // set next_flashers to be new_flashers, stripping any already flashed ones
             new_flashers.retain(|c| !already_flashed.contains(c));
             next_flashers = new_flashers;
         }
 
-        // println!("Flashed all of {:?}", already_flashed);
         let flashed = self.get_flashers();
         let count = flashed.len();
 
         // finally, reset any flashed squares to 0
-        // for c in already_flashed.iter() {
         for c in flashed.iter() {
             if let Some(cell) = self.get_mut_cell(c) {
                 *cell = 0;
             }
         }
 
-        // already_flashed.into_iter().count()
         count
     }
 
@@ -174,6 +150,7 @@ impl Display for OceanFloor {
         Ok(())
     }
 }
+
 fn parse_input(input: &str) -> OceanFloor {
     let height = input.lines().count();
     let width = input.lines().next().unwrap().chars().count();
@@ -195,19 +172,16 @@ fn parse_input(input: &str) -> OceanFloor {
 
 fn number_of_flashes(input: &str, iterations: usize) -> usize {
     let mut floor: OceanFloor = parse_input(input);
-    // println!("Initial State:");
-    // println!("{}", floor);
     let mut flashes = 0;
     for n in 0..iterations {
         let number_flashed = floor.step();
         flashes += number_flashed;
 
+        // special case for Dumbo Octopus Pt.2
         if number_flashed == floor.height * floor.width {
             println!("STOP! all octopi flashed at once at iteration {}", n);
             break;
         }
-        // println!("State after {} iterations:", n + 1);
-        // println!("{}", floor);
     }
 
     flashes
@@ -254,7 +228,7 @@ mod tests {
     fn does_part_one_full() {
         let number_of_iterations = 100;
         let num_flashes = number_of_flashes(FULL, number_of_iterations);
-        assert_eq!(num_flashes, 1656);
+        assert_eq!(num_flashes, 1735);
     }
 
     #[test]
