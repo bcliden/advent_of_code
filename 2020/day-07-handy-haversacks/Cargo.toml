@@ -1,0 +1,11 @@
+[package]
+name = "day-07-handy-haversacks"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.10.3"
+multimap = "0.8.3"
+peg = "0.8.0"
